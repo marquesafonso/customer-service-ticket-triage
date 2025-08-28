@@ -17,4 +17,16 @@ def load_dataset():
     )
 
     df_en = df.filter(pl.col("language") == "en")
+    df_en = df_en.select(["subject", "body", "queue"])
+    df_en = df_en.fill_null("")
     return df_en
+
+def process_dataset(model, dataset, batch_size: int = 32, chunk_size: int = 500):
+    preds = []
+    for idx_chunk, df_chunk in enumerate(dataset.iter_slices(n_rows=chunk_size)):
+        for idx_batch, df_batch in enumerate(df_chunk.iter_slices(n_rows=batch_size)):
+          print(f"Processing chunk {idx_chunk}: Batch {idx_batch}...")
+          chunk_preds = model.process_batch(tickets=df_batch["ticket"].to_list())
+          preds.extend(chunk_preds)
+
+    return dataset.with_columns(pl.Series("pred_queue_category", preds))

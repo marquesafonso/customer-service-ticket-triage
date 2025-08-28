@@ -1,32 +1,32 @@
 import polars  as pl
 import warnings
-from src.dataset import load_dataset
+from src.dataset import load_dataset, process_dataset
 from src.models import TicketTriageModel
 
 def main():
     warnings.filterwarnings("ignore") 
-    # Download latest version
-    dataset = load_dataset()[:3]
-    print(dataset)
-    print(dataset.schema)
-    queue_labels = dataset.select("queue").unique().to_series().to_list()
-    print(queue_labels)
-    customer_email = """
-    Subject: URGENT - Cannot access my account after payment
+    dataset = load_dataset()[:1000]
+    print(dataset.height)
 
-    I paid for the premium plan 3 hours ago and still can't access any features.
-    I've tried logging out and back in multiple times. This is unacceptable as I
-    have a client presentation in an hour and need the analytics dashboard.
-    Please fix this immediately or refund my payment.
-    """
+    queue_labels = dataset.select("queue").unique().to_series().to_list()
+
     dataset = dataset.with_columns((pl.concat_str([pl.col("subject") + "\n", pl.col("body")]).alias("ticket")))
     print(dataset)
-    test_str = dataset.select("ticket").to_series().to_list()[0]
-    print(test_str)
-    model = TicketTriageModel()
-    dataset = dataset.with_columns(((pl.col("ticket").map_elements(model.process_ticket)).cast(pl.String)).alias("pred_queue_category"))
+    model = TicketTriageModel(labels=queue_labels)
+
+    # test_str = dataset.select("ticket").to_series().to_list()[0]
+    # print(model.process_ticket(customer_ticket=test_str))
+    
+    dataset = process_dataset(
+        model=model,
+        dataset=dataset,
+        batch_size=200,
+        chunk_size=500
+    )
+
+    dataset.write_parquet("dataset_with_preds.parquet")
     print(dataset)
-    accuracy = dataset.filter((pl.col("queue") == pl.col("pred_queue_category"))).count() * 100 // dataset.count()
+    accuracy = dataset.filter((pl.col("queue") == pl.col("pred_queue_category"))).height * 100 / dataset.height
     print(accuracy)
 
 
