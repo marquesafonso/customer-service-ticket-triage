@@ -1,6 +1,6 @@
-import polars as pl
+import datasets as ds
 import kagglehub
-from kagglehub import KaggleDatasetAdapter, PolarsFrameType
+from kagglehub import KaggleDatasetAdapter
 
 def load_dataset():
     dataset = "tobiasbueck/multilingual-customer-support-tickets"
@@ -9,24 +9,23 @@ def load_dataset():
     kagglehub.dataset_download(dataset)
 
     # Load a DataFrame with a specific version of a CSV
-    df: pl.DataFrame = kagglehub.dataset_load(
-        adapter = KaggleDatasetAdapter.POLARS,
+    df: ds.Dataset = kagglehub.dataset_load(
+        adapter = KaggleDatasetAdapter.HUGGING_FACE,
         handle = dataset,
-        path = subset,
-        polars_frame_type=PolarsFrameType.DATA_FRAME
+        path = subset
     )
+    queue_labels = df.unique("queue")
+    # df = df.to_iterable_dataset()
 
-    df_en = df.filter(pl.col("language") == "en")
-    df_en = df_en.select(["subject", "body", "queue"])
-    df_en = df_en.fill_null("")
-    return df_en
-
-def process_dataset(model, dataset, batch_size: int = 32, chunk_size: int = 500):
-    preds = []
-    for idx_chunk, df_chunk in enumerate(dataset.iter_slices(n_rows=chunk_size)):
-        for idx_batch, df_batch in enumerate(df_chunk.iter_slices(n_rows=batch_size)):
-          print(f"Processing chunk {idx_chunk}: Batch {idx_batch}...")
-          chunk_preds = model.process_batch(tickets=df_batch["ticket"].to_list())
-          preds.extend(chunk_preds)
-
-    return dataset.with_columns(pl.Series("pred_queue_category", preds))
+    df.to_iterable_dataset()
+    df_en = df.filter(lambda x: x["language"] == "en")
+    df_en = df_en.select_columns(["subject", "body", "queue"])
+    df_en = df_en.map(lambda x: {
+        "subject": x.get("subject", "") or "",
+        "body": x.get("body", "") or "",
+        "queue": x.get("queue")
+    })
+    df_en = df_en.map(lambda x: {
+        "ticket": x.get("subject") + "\n" + x.get("body")
+        })
+    return df_en, queue_labels

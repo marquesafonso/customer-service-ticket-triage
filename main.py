@@ -1,32 +1,18 @@
-import polars  as pl
-import warnings
-from src.dataset import load_dataset, process_dataset
+from src.dataset import load_dataset
 from src.models import TicketTriageModel
 
 def main():
-    warnings.filterwarnings("ignore") 
-    dataset = load_dataset()[:1000]
-    print(dataset.height)
+    dataset, queue_labels = load_dataset()
+    dataset = dataset.take(300)
 
-    queue_labels = dataset.select("queue").unique().to_series().to_list()
-
-    dataset = dataset.with_columns((pl.concat_str([pl.col("subject") + "\n", pl.col("body")]).alias("ticket")))
-    print(dataset)
+    model_name = "microsoft/deberta-xlarge"
     model = TicketTriageModel(labels=queue_labels)
 
-    # test_str = dataset.select("ticket").to_series().to_list()[0]
-    # print(model.process_ticket(customer_ticket=test_str))
-    
-    dataset = process_dataset(
-        model=model,
-        dataset=dataset,
-        batch_size=200,
-        chunk_size=500
-    )
+    dataset = model.process_dataset(dataset, batch_size=256)
 
-    dataset.write_parquet("dataset_with_preds.parquet")
-    print(dataset)
-    accuracy = dataset.filter((pl.col("queue") == pl.col("pred_queue_category"))).height * 100 / dataset.height
+    dataset.to_parquet(f"dataset_preds_{model_name.replace('/', '_')}.parquet")
+
+    accuracy = dataset.filter(lambda x: x["queue"] == x["pred_queue"]).num_rows * 100 / dataset.num_rows
     print(accuracy)
 
 
