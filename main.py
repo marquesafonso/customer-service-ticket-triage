@@ -2,9 +2,9 @@ from src.dataset import load_dataset
 from src.models import TicketTriageModel
 
 def main():
-    dataset, queue_labels = load_dataset()
+    dataset, queue_labels, id2labels, labels2id = load_dataset()
     test_dataset, train_dataset = dataset["test"], dataset["train"]
-
+    
     model_name = "microsoft/deberta-xlarge"
     model = TicketTriageModel(labels=queue_labels)
 

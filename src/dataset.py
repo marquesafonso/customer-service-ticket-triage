@@ -27,11 +27,11 @@ def load_dataset():
     df_en = df_en.map(lambda x: {
         "ticket": x.get("subject") + "\n" + x.get("body")
         })
-    df_en = df_en.class_encode_column("queue")
-    
-    # TODO: verify correctness of id2label mapping
-    id2label = {i: label for i, label in enumerate(queue_labels.names)}
-    label2id = {label: i for i, label in enumerate(queue_labels.names)}
-
-    df_en = df_en.train_test_split(test_size=0.25, train_size=0.75, stratify_by_column="queue", seed=42)
-    return df_en, queue_labels
+    id2label = {i: label for i, label in enumerate(queue_labels)}
+    label2id = {label: i for i, label in enumerate(queue_labels)}
+    df_en = df_en.map(lambda x: {
+        "queue_encoded" : label2id[x.get("queue")]
+    })
+    df_en = df_en.class_encode_column("queue_encoded")
+    df_en = df_en.train_test_split(test_size=0.25, train_size=0.75, stratify_by_column="queue_encoded", seed=42)
+    return df_en, queue_labels, id2label, label2id
