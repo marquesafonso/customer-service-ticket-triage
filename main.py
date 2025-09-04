@@ -27,7 +27,7 @@ def main():
     basemodel.finetune_model(encoded_train_dataset, id2labels, labels2ids)
 
     ## Evaluate
-    finetuned_model_name = f"marquesafonso/ticket_triage_{basemodel_name.replace('/','_')}_finetuned"
+    finetuned_model_name = f"marquesafonso/ticket_triage_{basemodel_name.split('/')[1]}_finetuned"
     finetuned_model = TicketTriageModel(model_name=finetuned_model_name, labels=queue_labels)
 
     finetuned_dataset = finetuned_model.get_predictions_from_dataset(test_dataset, batch_size=256)
