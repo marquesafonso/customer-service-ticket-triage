@@ -9,7 +9,7 @@ import trackio
 class TicketTriageModel:
     def __init__(self,
                 labels: list,
-                model_name = "microsoft/deberta-v3-base"):
+                model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"):
         warnings.filterwarnings("ignore")
         self.model_name = model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -34,7 +34,7 @@ class TicketTriageModel:
 class BaseModel:
     def __init__(self,
                 labels: list,
-                model_name = "microsoft/deberta-v3-base"):
+                model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"):
         warnings.filterwarnings("ignore")
         self.model_name = model_name
         self.labels = labels    
@@ -89,7 +89,7 @@ class BaseModel:
                        metric_name = "f1"):
         # load model and tokenizer
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name, 
-                                                           problem_type="multi_label_classification", 
+                                                           problem_type="zero-shot-classification", 
                                                            num_labels=len(self.labels),
                                                            id2label=id2label,
                                                            label2id=label2id)

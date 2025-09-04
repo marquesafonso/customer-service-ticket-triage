@@ -17,7 +17,7 @@ def main():
     test_dataset, train_dataset = dataset["test"], dataset["train"]
     
     ## Prepare base model
-    basemodel_name = "microsoft/deberta-v3-base"
+    basemodel_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
     basemodel = BaseModel(model_name=basemodel_name, labels=queue_labels)
 
     # Tokenize train_dataset for training
