@@ -3,15 +3,33 @@ name = "customer-service-ticket-triage"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+    "pytorch-triton-xpu>=3.3.0 ; sys_platform == 'win32' or sys_platform == 'linux'",
     "accelerate>=1.10.1",
     "hf-xet>=1.1.9",
     "huggingface-hub>=0.34.4",
     "kagglehub[hf-datasets]>=0.3.13",
     "python-dotenv>=1.1.1",
-    "scikit-learn>=1.7.1",
-    "torch>=2.8.0",
     "trackio>=0.3.2",
     "transformers>=4.55.4",
+    "evaluate>=0.4.5",
 ]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-xpu", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
+]
+torchvision = [
+  { index = "pytorch-xpu", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
+]
+pytorch-triton-xpu = [
+  { index = "pytorch-xpu", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-xpu"
+url = "https://download.pytorch.org/whl/xpu"
+explicit = true

@@ -1,18 +1,33 @@
-import warnings
+import warnings, logging
 import datasets as ds
-from transformers import pipeline, AutoModelForSequenceClassification, AutoTokenizer, TrainingArguments, Trainer, EvalPrediction
+from transformers import (
+    pipeline,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    TrainingArguments,
+    Trainer,
+    EvalPrediction
+)
 import torch
-from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
 import numpy as np
-import trackio
+import evaluate
 
 class TicketTriageModel:
-    def __init__(self,
-                labels: list,
-                model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"):
+    def __init__(
+        self,
+        labels: list,
+        model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
+    ):
         warnings.filterwarnings("ignore")
+        logging.basicConfig(
+           level=logging.INFO, 
+            format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+            datefmt='%H:%M:%S'
+        )
         self.model_name = model_name
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "xpu" if torch.xpu.is_available() else "cpu"
+        if torch.xpu.is_available():
+            torch.xpu.empty_cache()
         self.classifier = pipeline("zero-shot-classification", model=self.model_name, device=self.device)
         self.labels = labels
 
@@ -32,84 +47,75 @@ class TicketTriageModel:
         return dataset.map(predict, batched=True, batch_size=batch_size)
 
 class BaseModel:
-    def __init__(self,
-                labels: list,
-                model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"):
+    def __init__(
+        self,
+        labels: list,
+        model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
+    ):
+        logging.basicConfig(
+            level=logging.INFO, 
+            format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+            datefmt='%H:%M:%S'
+        )
         warnings.filterwarnings("ignore")
         self.model_name = model_name
-        self.labels = labels    
+        self.labels = labels
+
     # source: https://jesusleal.io/2021/04/21/Longformer-multilabel-classification/
-    def multi_label_metrics(self, predictions, labels, threshold=0.5):
-        # first, apply sigmoid on predictions which are of shape (batch_size, num_labels)
-        sigmoid = torch.nn.Sigmoid()
-        probs = sigmoid(torch.Tensor(predictions))
-        # next, use threshold to turn them into integer predictions
-        y_pred = np.zeros(probs.shape)
-        y_pred[np.where(probs >= threshold)] = 1
-        # finally, compute metrics
-        y_true = labels
-        f1_micro_average = f1_score(y_true=y_true, y_pred=y_pred, average='micro')
-        roc_auc = roc_auc_score(y_true, y_pred, average = 'micro')
-        accuracy = accuracy_score(y_true, y_pred)
-        # return as dictionary
-        self.metrics = {
-            'f1': f1_micro_average,
-            'roc_auc': roc_auc,
-            'accuracy': accuracy
-            }
-        return self.metrics
-
-    def compute_metrics(self, p: EvalPrediction):
-        preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        self.result = self.multi_label_metrics(predictions=preds, labels=p.label_ids)
-        return self.result
+    def compute_metrics(self, eval_preds: EvalPrediction):
+        metric = evaluate.load("f1")
+        logits, labels = eval_preds
+        preds = np.argmax(logits, -1)
+        return metric.compute(predictions=preds, references=labels)
     
-    def preprocess_data(self, dataset):
-        # take a batch of texts
-        text = list(dataset["ticket"])
-        # encode them
-        encoding = self.tokenizer(text, padding="max_length", truncation=True, max_length=128)
-        # add labels
-        labels_batch = list(dataset["queue_encoded"])
-        # create numpy array of shape (batch_size, num_labels)
-        labels_matrix = np.zeros((len(text), len(self.labels)))
-        # fill numpy array
-        for idx, _ in enumerate(self.labels):
-            labels_matrix[:, idx] = labels_batch[idx]
-
-        encoding["labels"] = labels_matrix.tolist()
-
-        return encoding
-            
-    def finetune_model(self,
-                       train_dataset,
-                       id2label,
-                       label2id,
-                       batch_size = 8,
-                       metric_name = "f1"):
-        # load model and tokenizer
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name, 
-                                                           problem_type="zero-shot-classification", 
-                                                           num_labels=len(self.labels),
-                                                           id2label=id2label,
-                                                           label2id=label2id)
+    def preprocess_data(self, dataset: ds.Dataset):
+        # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        def tokenize(examples):
+            return self.tokenizer(examples, padding="max_length", truncation=True)
+        dataset = dataset.map(tokenize, batched=True, remove_columns=dataset.column_names)
+        dataset = dataset.with_format("torch")
+        return dataset
+            
+    def finetune_model(
+        self,
+        train_dataset : ds.Dataset,
+        id2label : dict,
+        label2id : dict,
+        batch_size : int = 16
+    ):
+        logging.info(f"XPU: {torch.xpu.is_available()}")
+        if torch.xpu.is_available():
+            torch.xpu.empty_cache()
+        
+        # load model
+        logging.info("Loading model...")
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_name, 
+            problem_type="zero-shot-classification", 
+            num_labels=len(self.labels),
+            id2label=id2label,
+            label2id=label2id,
+            ignore_mismatched_sizes=True
+        )
 
         # tokenize and prepare the training dataset for training
+        logging.info("Tokenizing and prepare the training dataset for training...")
         self.encoded_train_dataset = self.preprocess_data(train_dataset)
-        
+        logging.info(self.encoded_train_dataset)
+
         # initialize training args
         args = TrainingArguments(
             f"marquesafonso/ticket_triage_{self.model_name.replace('/','_')}_finetuned",
             save_strategy = "epoch",
             learning_rate=2e-5,
             per_device_train_batch_size=batch_size,
-            per_device_eval_batch_size=batch_size,
             num_train_epochs=5,
             weight_decay=0.01,
-            metric_for_best_model=metric_name,
-            label_names = self.labels,
+            fp16=True,
+            lr_scheduler_type="cosine",
             report_to="trackio",
+            remove_unused_columns=False,
             push_to_hub=True
         )
 
