@@ -67,13 +67,14 @@ class BaseModel:
         logits, labels = eval_preds
         preds = np.argmax(logits, -1)
         return metric.compute(predictions=preds, references=labels)
+
     
     def preprocess_data(self, dataset: ds.Dataset):
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         def tokenize(examples):
-            return self.tokenizer(examples, padding="max_length", truncation=True)
-        dataset = dataset.map(tokenize, batched=True, remove_columns=dataset.column_names)
+            return self.tokenizer(examples["text"], padding="max_length", truncation=True)
+        dataset = dataset.map(tokenize, batched=True, remove_columns=["text"])
         dataset = dataset.with_format("torch")
         return dataset
             
@@ -92,7 +93,7 @@ class BaseModel:
         logging.info("Loading model...")
         self.model = AutoModelForSequenceClassification.from_pretrained(
             self.model_name, 
-            problem_type="zero-shot-classification", 
+            problem_type="single_label_classification", # problem_type (str, optional) — Problem type for XxxForSequenceClassification models. Can be one of "regression", "single_label_classification" or "multi_label_classification".
             num_labels=len(self.labels),
             id2label=id2label,
             label2id=label2id,

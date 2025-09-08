@@ -37,7 +37,7 @@ def load_dataset():
         "queue_encoded" : label2id[x.get("queue")]
     })
     df_en = df_en.class_encode_column("queue_encoded")
-    df_en = df_en.select_columns(["ticket", "queue_encoded"]).rename_columns({"ticket": "text", "queue_encoded": "label"})
-    logging.info(df_en.to_pandas()["label"])
-    df_en = df_en.train_test_split(test_size=0.25, train_size=0.75, stratify_by_column="label", seed=42)
+    df_en = df_en.select_columns(["ticket", "queue_encoded"]).rename_columns({"ticket": "text", "queue_encoded": "labels"})
+    logging.info(df_en.to_pandas())
+    df_en = df_en.train_test_split(test_size=0.25, train_size=0.75, stratify_by_column="labels", seed=42)
     return df_en, queue_labels, id2label, label2id
