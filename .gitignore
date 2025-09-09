@@ -2,3 +2,4 @@
 .env
 marquesafonso/
 */__pycache__/
+output/

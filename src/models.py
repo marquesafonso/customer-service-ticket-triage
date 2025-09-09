@@ -1,9 +1,11 @@
 import warnings, logging
+from typing import Any
 import datasets as ds
 from transformers import (
     pipeline,
     AutoModelForSequenceClassification,
     AutoTokenizer,
+    AutoConfig,
     TrainingArguments,
     Trainer,
     EvalPrediction
@@ -16,7 +18,8 @@ class TicketTriageModel:
     def __init__(
         self,
         labels: list,
-        model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
+        model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0",
+        id2label: dict[int, Any] = None
     ):
         warnings.filterwarnings("ignore")
         logging.basicConfig(
@@ -25,26 +28,37 @@ class TicketTriageModel:
             datefmt='%H:%M:%S'
         )
         self.model_name = model_name
-        self.device = "xpu" if torch.xpu.is_available() else "cpu"
         if torch.xpu.is_available():
+            self.device = "xpu"
             torch.xpu.empty_cache()
+        else:
+            self.device = "cpu"
         self.classifier = pipeline("zero-shot-classification", model=self.model_name, device=self.device)
         self.labels = labels
+        if not id2label:
+            self.config = AutoConfig.from_pretrained(self.model_name)
+            self.ids2labels = self.config.id2label
+        else:
+            self.ids2labels = id2label
 
     def get_predictions_from_dataset(self, dataset: ds.Dataset, batch_size: int = 32) -> ds.Dataset:
         """
         Run batch inference on a Hugging Face Dataset and add predictions as a column.
         """
+        def ids2labels(batch):
+            return {"labels_str" : [self.ids2labels[_id] for _id in batch["labels"]]} 
 
         def predict(batch):
-            outputs = self.classifier(batch["ticket"], self.labels,
+            outputs = self.classifier(batch["text"], self.labels,
                                       multi_label=False, batch_size=batch_size)
             if isinstance(outputs, dict):
-                return {"pred_queue": outputs["labels"][0]}
+                return {"pred_labels": outputs["labels"][0]}
             else:
-                return {"pred_queue": [out["labels"][0] for out in outputs]}
-
-        return dataset.map(predict, batched=True, batch_size=batch_size)
+                return {"pred_labels": [out["labels"][0] for out in outputs]}
+        
+        dataset = dataset.map(predict, batched=True, batch_size=batch_size)
+        dataset = dataset.map(ids2labels, batched=True, batch_size=batch_size)
+        return dataset
 
 class BaseModel:
     def __init__(
@@ -61,7 +75,6 @@ class BaseModel:
         self.model_name = model_name
         self.labels = labels
 
-    # source: https://jesusleal.io/2021/04/21/Longformer-multilabel-classification/
     def compute_metrics(self, eval_preds: EvalPrediction):
         metric = evaluate.load("f1")
         logits, labels = eval_preds

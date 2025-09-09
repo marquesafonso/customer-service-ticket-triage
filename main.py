@@ -22,7 +22,7 @@ def main():
     logging.info("Prepare datasets...")
     dataset, queue_labels, id2label, label2id = load_dataset()
     test_dataset, train_dataset = dataset["test"], dataset["train"]
-    
+
     ## Prepare base model
     logging.info("Preparing base model...")
     basemodel_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
@@ -42,16 +42,23 @@ def main():
 
     ## Evaluate on test set
     logging.info("Evaluating on test set...")
-    finetuned_model_name = f"marquesafonso/ticket_triage_{basemodel_name.replace('/',"_")[1]}_finetuned"
+    finetuned_model_name = f"marquesafonso/ticket_triage_{basemodel_name.replace('/',"_")}_finetuned"
     finetuned_model = TicketTriageModel(
         model_name=finetuned_model_name,
-        labels=queue_labels
+        labels=queue_labels,
+        id2label=id2label
     )
 
-    finetuned_dataset = finetuned_model.get_predictions_from_dataset(test_dataset, batch_size=256)
-    finetuned_dataset.to_parquet(f"finetuned_preds.parquet")
+    finetuned_dataset = finetuned_model.get_predictions_from_dataset(test_dataset, batch_size=64)
+    finetuned_dataset.to_parquet(f"output/baseline_preds.parquet")
+    
+    ## From a saved predictions file
+    # import datasets as ds
+    # finetuned_dataset = ds.Dataset.from_parquet(f"output/baseline_preds.parquet")
 
-    finetuned_accuracy = finetuned_dataset.filter(lambda x: x["queue"] == x["pred_queue"]).num_rows * 100 / finetuned_dataset.num_rows
+    logging.info(finetuned_dataset.to_pandas().head())
+
+    finetuned_accuracy = finetuned_dataset.filter(lambda x: x["pred_labels"] == x["labels_str"]).num_rows * 100 / finetuned_dataset.num_rows
     print(finetuned_accuracy)
 
 
