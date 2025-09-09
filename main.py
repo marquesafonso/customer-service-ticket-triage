@@ -21,7 +21,7 @@ def main():
     ## Prepare datasets
     logging.info("Prepare datasets...")
     dataset, queue_labels, id2label, label2id = load_dataset()
-    test_dataset, train_dataset = dataset["test"], dataset["train"]
+    train_dataset, validation_dataset, test_dataset = dataset["train"], dataset["validation"], dataset["test"],
 
     ## Prepare base model
     logging.info("Preparing base model...")
@@ -35,9 +35,10 @@ def main():
     logging.info("Finetuning the model...")
     basemodel.finetune_model(
         train_dataset=train_dataset,
+        validation_dataset=validation_dataset,
         id2label=id2label,
         label2id=label2id,
-        batch_size=16
+        batch_size=8
     )
 
     ## Evaluate on test set
@@ -50,11 +51,11 @@ def main():
     )
 
     finetuned_dataset = finetuned_model.get_predictions_from_dataset(test_dataset, batch_size=64)
-    finetuned_dataset.to_parquet(f"output/baseline_preds.parquet")
+    finetuned_dataset.to_parquet(f"output/finetuned_preds.parquet")
     
-    ## From a saved predictions file
+    # From a saved predictions file
     # import datasets as ds
-    # finetuned_dataset = ds.Dataset.from_parquet(f"output/baseline_preds.parquet")
+    # finetuned_dataset = ds.Dataset.from_parquet(f"output/finetuned_preds.parquet")
 
     logging.info(finetuned_dataset.to_pandas().head())
 

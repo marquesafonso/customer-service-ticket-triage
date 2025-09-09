@@ -8,6 +8,7 @@ from transformers import (
     AutoConfig,
     TrainingArguments,
     Trainer,
+    EarlyStoppingCallback,
     EvalPrediction
 )
 import torch
@@ -74,13 +75,28 @@ class BaseModel:
         warnings.filterwarnings("ignore")
         self.model_name = model_name
         self.labels = labels
+        self.f1_metric = evaluate.load("f1")
+        self.accuracy_metric = evaluate.load("accuracy")
 
     def compute_metrics(self, eval_preds: EvalPrediction):
-        metric = evaluate.load("f1")
         logits, labels = eval_preds
         preds = np.argmax(logits, -1)
-        return metric.compute(predictions=preds, references=labels)
+        ## using f1-macro to address class imbalance
+        ## See https://www.numberanalytics.com/blog/f1-score-imbalanced-classes-guide
+        macro_f1 = self.f1_metric.compute(predictions=preds, references=labels, average="macro")
 
+        ## Accuracy
+        acc = self.accuracy_metric.compute(predictions=preds, references=labels)
+        
+        ## Per-class f1 score
+        per_class_f1 = self.f1_metric.compute(predictions=preds, references=labels, average=None)
+        per_class_f1_dict = {f"f1_class_{i}": score for i, score in enumerate(per_class_f1["f1"])}
+
+        return {
+            "accuracy": acc["accuracy"],
+            "f1_macro": macro_f1["f1"],
+            **per_class_f1_dict
+        }
     
     def preprocess_data(self, dataset: ds.Dataset):
         # Load tokenizer
@@ -94,9 +110,10 @@ class BaseModel:
     def finetune_model(
         self,
         train_dataset : ds.Dataset,
+        validation_dataset: ds.Dataset,
         id2label : dict,
         label2id : dict,
-        batch_size : int = 16
+        batch_size : int = 8
     ):
         logging.info(f"XPU: {torch.xpu.is_available()}")
         if torch.xpu.is_available():
@@ -105,7 +122,7 @@ class BaseModel:
         # load model
         logging.info("Loading model...")
         self.model = AutoModelForSequenceClassification.from_pretrained(
-            self.model_name, 
+            self.model_name,
             problem_type="single_label_classification", # problem_type (str, optional) — Problem type for XxxForSequenceClassification models. Can be one of "regression", "single_label_classification" or "multi_label_classification".
             num_labels=len(self.labels),
             id2label=id2label,
@@ -122,10 +139,15 @@ class BaseModel:
         args = TrainingArguments(
             f"marquesafonso/ticket_triage_{self.model_name.replace('/','_')}_finetuned",
             save_strategy = "epoch",
-            learning_rate=2e-5,
+            eval_strategy="epoch",
+            num_train_epochs=3,
+            learning_rate=1e-5,
+            warmup_ratio=0.1,
             per_device_train_batch_size=batch_size,
-            num_train_epochs=5,
+            gradient_accumulation_steps=2,
             weight_decay=0.01,
+            max_grad_norm=1.0,
+            load_best_model_at_end=True,
             fp16=True,
             lr_scheduler_type="cosine",
             report_to="trackio",
@@ -138,8 +160,10 @@ class BaseModel:
             self.model,
             args,
             train_dataset=self.encoded_train_dataset,
+            eval_dataset=validation_dataset,
             tokenizer=self.tokenizer,
-            compute_metrics=self.compute_metrics
+            compute_metrics=self.compute_metrics,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=2)]
         )
 
         # fine tune the model

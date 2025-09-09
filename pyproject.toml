@@ -16,6 +16,7 @@ dependencies = [
     "trackio>=0.3.2",
     "transformers>=4.55.4",
     "evaluate>=0.4.5",
+    "scikit-learn>=1.7.2",
 ]
 
 [tool.uv.sources]

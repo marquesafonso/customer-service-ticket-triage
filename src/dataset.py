@@ -39,5 +39,15 @@ def load_dataset():
     df_en = df_en.class_encode_column("queue_encoded")
     df_en = df_en.select_columns(["ticket", "queue_encoded"]).rename_columns({"ticket": "text", "queue_encoded": "labels"})
     logging.info(df_en.to_pandas())
-    df_en = df_en.train_test_split(test_size=0.25, train_size=0.75, stratify_by_column="labels", seed=42)
-    return df_en, queue_labels, id2label, label2id
+
+    ## Splitting dataset into train, validation and test sets
+    train_valid, test = df_en.train_test_split(test_size=0.25, stratify_by_column="labels", seed=42).values()
+    train, valid = train_valid.train_test_split(test_size=0.1, stratify_by_column="labels", seed=42).values()
+
+    dataset_dict = ds.DatasetDict({
+        "train": train,
+        "validation": valid,
+        "test": test
+    })
+
+    return dataset_dict, queue_labels, id2label, label2id
