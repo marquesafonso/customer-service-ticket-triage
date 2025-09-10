@@ -38,7 +38,8 @@ def main():
         validation_dataset=validation_dataset,
         id2label=id2label,
         label2id=label2id,
-        batch_size=8
+        batch_size=8,
+        num_train_epochs=10
     )
 
     ## Evaluate on test set

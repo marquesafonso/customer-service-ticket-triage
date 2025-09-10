@@ -113,7 +113,8 @@ class BaseModel:
         validation_dataset: ds.Dataset,
         id2label : dict,
         label2id : dict,
-        batch_size : int = 8
+        batch_size : int = 8,
+        num_train_epochs : int = 10
     ):
         logging.info(f"XPU: {torch.xpu.is_available()}")
         if torch.xpu.is_available():
@@ -141,7 +142,7 @@ class BaseModel:
             f"marquesafonso/ticket_triage_{self.model_name.replace('/','_')}_finetuned",
             save_strategy = "epoch",
             eval_strategy="epoch",
-            num_train_epochs=3,
+            num_train_epochs=num_train_epochs,
             learning_rate=1e-5,
             warmup_ratio=0.1,
             per_device_train_batch_size=batch_size,
