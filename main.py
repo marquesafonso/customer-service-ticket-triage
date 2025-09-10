@@ -21,7 +21,7 @@ def main():
     ## Prepare datasets
     logging.info("Prepare datasets...")
     dataset, queue_labels, id2label, label2id = load_dataset()
-    train_dataset, validation_dataset, test_dataset = dataset["train"], dataset["validation"], dataset["test"],
+    train_dataset, validation_dataset, test_dataset = dataset["train"], dataset["validation"], dataset["test"]
 
     ## Prepare base model
     logging.info("Preparing base model...")

@@ -133,6 +133,7 @@ class BaseModel:
         # tokenize and prepare the training dataset for training
         logging.info("Tokenizing and prepare the training dataset for training...")
         self.encoded_train_dataset = self.preprocess_data(train_dataset)
+        self.encoded_validation_dataset = self.preprocess_data(validation_dataset)
         logging.info(self.encoded_train_dataset)
 
         # initialize training args
@@ -160,7 +161,7 @@ class BaseModel:
             self.model,
             args,
             train_dataset=self.encoded_train_dataset,
-            eval_dataset=validation_dataset,
+            eval_dataset=self.encoded_validation_dataset,
             tokenizer=self.tokenizer,
             compute_metrics=self.compute_metrics,
             callbacks=[EarlyStoppingCallback(early_stopping_patience=2)]
