@@ -14,6 +14,7 @@ from transformers import (
 import torch
 import numpy as np
 import evaluate
+from src.dataset import oversample_with_interleave
 
 class TicketTriageModel:
     def __init__(
@@ -99,7 +100,7 @@ class BaseModel:
         }
     
     def preprocess_data(self, dataset: ds.Dataset):
-        # Load tokenizer
+        ## Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         def tokenize(examples):
             return self.tokenizer(examples["text"], padding="max_length", truncation=True)
@@ -114,13 +115,13 @@ class BaseModel:
         id2label : dict,
         label2id : dict,
         batch_size : int = 8,
-        num_train_epochs : int = 10
+        num_train_epochs : int = 5
     ):
         logging.info(f"XPU: {torch.xpu.is_available()}")
         if torch.xpu.is_available():
             torch.xpu.empty_cache()
         
-        # load model
+        ## Load model
         logging.info("Loading model...")
         self.model = AutoModelForSequenceClassification.from_pretrained(
             self.model_name,
@@ -131,33 +132,43 @@ class BaseModel:
             ignore_mismatched_sizes=True
         )
 
-        # tokenize and prepare the training dataset for training
+        ## Oversampling (underrepresented) classes
+        train_balanced = oversample_with_interleave(
+            train_dataset,
+            num_labels=len(self.labels),
+            boost_classes=[8, 9], # the underrepresented classes
+            boost_factor=1.75,
+            seed=42
+        )
+
+
+        ## Tokenize and prepare the training dataset for training
         logging.info("Tokenizing and prepare the training dataset for training...")
-        self.encoded_train_dataset = self.preprocess_data(train_dataset)
+        self.encoded_train_dataset = self.preprocess_data(train_balanced)
         self.encoded_validation_dataset = self.preprocess_data(validation_dataset)
         logging.info(self.encoded_train_dataset)
 
-        # initialize training args
+        ## Initialize training args
         args = TrainingArguments(
             f"marquesafonso/ticket_triage_{self.model_name.replace('/','_')}_finetuned",
             save_strategy = "epoch",
             eval_strategy="epoch",
             num_train_epochs=num_train_epochs,
-            learning_rate=1e-5,
+            learning_rate=1e-6,
             warmup_ratio=0.1,
             per_device_train_batch_size=batch_size,
-            gradient_accumulation_steps=2,
+            gradient_accumulation_steps=2, ## Efective batch size will be batch_size * gradient_accumulation_steps
             weight_decay=0.01,
-            max_grad_norm=1.0,
+            max_grad_norm=0.5,
             load_best_model_at_end=True,
             fp16=True,
-            lr_scheduler_type="cosine",
+            lr_scheduler_type="linear",
             report_to="trackio",
             remove_unused_columns=False,
             push_to_hub=True
         )
 
-        # initialize the trainer
+        ## Initialize the trainer
         self.trainer = Trainer(
             self.model,
             args,

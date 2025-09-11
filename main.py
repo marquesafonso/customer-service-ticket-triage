@@ -4,8 +4,6 @@ from src.models import TicketTriageModel, BaseModel
 from huggingface_hub import login
 from dotenv import load_dotenv
 
-## TODO: improve result evaluation with compute_metrics
-
 def main():
     logging.basicConfig(
         level=logging.INFO, 
@@ -39,7 +37,7 @@ def main():
         id2label=id2label,
         label2id=label2id,
         batch_size=8,
-        num_train_epochs=10
+        num_train_epochs=7
     )
 
     ## Evaluate on test set
@@ -61,7 +59,7 @@ def main():
     logging.info(finetuned_dataset.to_pandas().head())
 
     finetuned_accuracy = finetuned_dataset.filter(lambda x: x["pred_labels"] == x["labels_str"]).num_rows * 100 / finetuned_dataset.num_rows
-    print(finetuned_accuracy)
+    logging.info(finetuned_accuracy)
 
 
 if __name__ == "__main__":
