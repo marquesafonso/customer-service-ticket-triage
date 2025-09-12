@@ -1,4 +1,4 @@
-import warnings, logging
+import warnings, logging, os
 from typing import Any
 import datasets as ds
 from transformers import (
@@ -14,13 +14,14 @@ from transformers import (
 import torch
 import numpy as np
 import evaluate
+from dotenv import load_dotenv
 from src.dataset import oversample_with_interleave
 
 class TicketTriageModel:
     def __init__(
         self,
         labels: list,
-        model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0",
+        model_name = "microsoft/deberta-v3-small",
         id2label: dict[int, Any] = None
     ):
         warnings.filterwarnings("ignore")
@@ -66,7 +67,7 @@ class BaseModel:
     def __init__(
         self,
         labels: list,
-        model_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
+        model_name :str = "microsoft/deberta-v3-small"
     ):
         logging.basicConfig(
             level=logging.INFO, 
@@ -115,8 +116,11 @@ class BaseModel:
         id2label : dict,
         label2id : dict,
         batch_size : int = 8,
-        num_train_epochs : int = 5
+        num_train_epochs : int = 5,
+        oversample : bool = False
     ):
+        load_dotenv()
+        HF_USER = os.getenv("HF_USER")
         logging.info(f"XPU: {torch.xpu.is_available()}")
         if torch.xpu.is_available():
             torch.xpu.empty_cache()
@@ -132,36 +136,36 @@ class BaseModel:
             ignore_mismatched_sizes=True
         )
 
-        ## Oversampling (underrepresented) classes
-        train_balanced = oversample_with_interleave(
-            train_dataset,
-            num_labels=len(self.labels),
-            boost_classes=[8, 9], # the underrepresented classes
-            boost_factor=1.75,
-            seed=42
-        )
-
+        if oversample:
+            ## Oversampling (underrepresented) classes
+            logging.info("Oversampling (underrepresented) classes...")
+            train_dataset = oversample_with_interleave(
+                train_dataset,
+                num_labels=len(self.labels),
+                seed=42
+            )
 
         ## Tokenize and prepare the training dataset for training
         logging.info("Tokenizing and prepare the training dataset for training...")
-        self.encoded_train_dataset = self.preprocess_data(train_balanced)
+        self.encoded_train_dataset = self.preprocess_data(train_dataset)
         self.encoded_validation_dataset = self.preprocess_data(validation_dataset)
         logging.info(self.encoded_train_dataset)
 
         ## Initialize training args
         args = TrainingArguments(
-            f"marquesafonso/ticket_triage_{self.model_name.replace('/','_')}_finetuned",
+            f"{HF_USER}/ticket_triage_{self.model_name.replace('/','_')}_finetuned",
             save_strategy = "epoch",
             eval_strategy="epoch",
             num_train_epochs=num_train_epochs,
-            learning_rate=1e-6,
+            learning_rate=1e-4,
             warmup_ratio=0.1,
             per_device_train_batch_size=batch_size,
             gradient_accumulation_steps=2, ## Efective batch size will be batch_size * gradient_accumulation_steps
             weight_decay=0.01,
             max_grad_norm=0.5,
+            metric_for_best_model="f1_macro",
+            greater_is_better=True,
             load_best_model_at_end=True,
-            fp16=True,
             lr_scheduler_type="linear",
             report_to="trackio",
             remove_unused_columns=False,

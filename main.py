@@ -14,6 +14,7 @@ def main():
     logging.info("Logging into HF...")
     load_dotenv()
     HF_TOKEN = os.getenv("HF_TOKEN")
+    HF_USER =  os.getenv("HF_USER")
     login(token=HF_TOKEN)
 
     ## Prepare datasets
@@ -23,7 +24,7 @@ def main():
 
     ## Prepare base model
     logging.info("Preparing base model...")
-    basemodel_name = "MoritzLaurer/deberta-v3-base-zeroshot-v2.0"
+    basemodel_name = "microsoft/deberta-v3-small"
     basemodel = BaseModel(
         model_name=basemodel_name,
         labels=queue_labels
@@ -37,12 +38,13 @@ def main():
         id2label=id2label,
         label2id=label2id,
         batch_size=8,
-        num_train_epochs=7
+        num_train_epochs=15,
+        oversample=False
     )
 
     ## Evaluate on test set
     logging.info("Evaluating on test set...")
-    finetuned_model_name = f"marquesafonso/ticket_triage_{basemodel_name.replace('/',"_")}_finetuned"
+    finetuned_model_name = f"{HF_USER}/ticket_triage_{basemodel_name.replace('/',"_")}_finetuned"
     finetuned_model = TicketTriageModel(
         model_name=finetuned_model_name,
         labels=queue_labels,
@@ -50,11 +52,11 @@ def main():
     )
 
     finetuned_dataset = finetuned_model.get_predictions_from_dataset(test_dataset, batch_size=64)
-    finetuned_dataset.to_parquet(f"output/finetuned_preds.parquet")
+    finetuned_dataset.to_parquet(f"output/{basemodel_name.replace('/',"_")}_finetuned_preds.parquet")
     
     # From a saved predictions file
     # import datasets as ds
-    # finetuned_dataset = ds.Dataset.from_parquet(f"output/finetuned_preds.parquet")
+    # finetuned_dataset = ds.Dataset.from_parquet(f"output/{basemodel_name.replace('/',"_")}_finetuned_preds.parquet")
 
     logging.info(finetuned_dataset.to_pandas().head())
 
