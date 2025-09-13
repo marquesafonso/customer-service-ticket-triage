@@ -2,7 +2,8 @@ import warnings, logging, os
 from typing import Any
 import datasets as ds
 from transformers import (
-    pipeline,
+    pipeline, 
+    get_scheduler,
     AutoModelForSequenceClassification,
     AutoTokenizer,
     AutoConfig,
@@ -21,7 +22,7 @@ class TicketTriageModel:
     def __init__(
         self,
         labels: list,
-        model_name = "microsoft/deberta-v3-small",
+        model_name = "microsoft/deberta-v3-base",
         id2label: dict[int, Any] = None
     ):
         warnings.filterwarnings("ignore")
@@ -67,7 +68,7 @@ class BaseModel:
     def __init__(
         self,
         labels: list,
-        model_name :str = "microsoft/deberta-v3-small"
+        model_name :str = "microsoft/deberta-v3-base"
     ):
         logging.basicConfig(
             level=logging.INFO, 
@@ -142,7 +143,7 @@ class BaseModel:
             train_dataset = oversample_with_interleave(
                 train_dataset,
                 num_labels=len(self.labels),
-                seed=42
+                seed=10
             )
 
         ## Tokenize and prepare the training dataset for training
@@ -157,11 +158,9 @@ class BaseModel:
             save_strategy = "epoch",
             eval_strategy="epoch",
             num_train_epochs=num_train_epochs,
-            learning_rate=1e-4,
-            warmup_ratio=0.1,
+            warmup_ratio=0.06,
             per_device_train_batch_size=batch_size,
             gradient_accumulation_steps=2, ## Efective batch size will be batch_size * gradient_accumulation_steps
-            weight_decay=0.01,
             max_grad_norm=0.5,
             metric_for_best_model="f1_macro",
             greater_is_better=True,
@@ -172,6 +171,23 @@ class BaseModel:
             push_to_hub=True
         )
 
+        ## Custom optimizer an lr_scheduler
+        ## Following hyperparams from: https://huggingface.co/MoritzLaurer/ModernBERT-large-zeroshot-v2.0
+        optimizer = torch.optim.AdamW(
+            self.model.parameters(),
+            lr=9e-06,
+            betas=(0.9, 0.999),
+            eps=1e-08,
+            weight_decay=0.01
+        )
+        num_training_steps = len(self.encoded_train_dataset) // batch_size * num_train_epochs
+        lr_scheduler = get_scheduler(
+            "linear",
+            optimizer=optimizer,
+            num_training_steps=num_training_steps,
+            num_warmup_steps=0.06*num_training_steps
+        )
+
         ## Initialize the trainer
         self.trainer = Trainer(
             self.model,
@@ -180,6 +196,7 @@ class BaseModel:
             eval_dataset=self.encoded_validation_dataset,
             tokenizer=self.tokenizer,
             compute_metrics=self.compute_metrics,
+            optimizers=(optimizer, lr_scheduler),
             callbacks=[EarlyStoppingCallback(early_stopping_patience=2)]
         )
 

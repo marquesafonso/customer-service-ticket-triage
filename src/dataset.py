@@ -41,8 +41,8 @@ def load_dataset():
     logging.info(df_en.to_pandas())
 
     ## Splitting dataset into train, validation and test sets
-    train_valid, test = df_en.train_test_split(test_size=0.25, stratify_by_column="labels", seed=42).values()
-    train, valid = train_valid.train_test_split(test_size=0.1, stratify_by_column="labels", seed=42).values()
+    train_valid, test = df_en.train_test_split(test_size=0.25, stratify_by_column="labels", seed=10).values()
+    train, valid = train_valid.train_test_split(test_size=0.1, stratify_by_column="labels", seed=10).values()
 
     ## Verifying distribution of class labels in train and validation datasets
     labels = sorted(train.to_pandas()["labels"].unique())
