@@ -8,7 +8,7 @@ Our focus here is on categorizing the emails with tickets (i.e., subject + body)
 
 The methodology followed has been to take a pretrained model [Deberta-v3-small](https://huggingface.co/microsoft/deberta-v3-small) and finetune it to our data for single class classification.
 
-We also experimented with [Deberta v3 zeroshot 2.0](https://huggingface.co/MoritzLaurer/deberta-v3-base-zeroshot-v2.0)
+We also experimented with [Deberta v3 zeroshot 2.0](https://huggingface.co/MoritzLaurer/deberta-v3-base-zeroshot-v2.0) a model pretrained on NLI tasks.
 
 <details>
   <summary><b>Quickstart and dependency overview</b></summary>
@@ -478,7 +478,51 @@ if __name__ == "__main__":
 
 ## Results and Experiments
 
-TODO
+Overall, the models finetuned displayed worsening behaviour on the test set. Different experiments and models were tried but to no avail with this training pipeline.
+
+Here are some log snippets of the training experiments:
+
+<img title="GTE-ModernBERT logs" alt="GTE-ModernBERT log (google colab)" src="static/gte_modernbert_training_logs.png">
+<img title="Trackio Logs 1" alt="Trackio Logs 1" src="static/trackio_training_logs_1.png">
+<img title="Trackio Logs 2" alt="Trackio Logs 2" src="static/trackio_training_logs_2.png">
+<img title="Trackio Logs 3" alt="Trackio Logs 3" src="static/trackio_training_logs_3.png">
+
+Below you will find a table with the evaluation accuracy of the trained models on the test set.
+
+| Model | Eval Accuracy (test set) % |
+| --- | --- |
+| (baseline) MoritzLaurer/deberta-v3-base-zeroshot-v2.0 | 27.1 |
+| marquesafonso/ticket_triage_Alibaba-NLP_gte-modernbert-base_finetuned | 12.9 |
+| marquesafonso/ticket_triage_MoritzLaurer_deberta-v3-base-zeroshot-v1.1-all-33_finetuned | 11.87 |
+| marquesafonso/ticket_triage_microsoft_deberta-v3-base_finetuned | 4.5 |
+| marquesafonso/ticket_triage_microsoft_deberta-v3-small_finetuned | 8.98 |
+| marquesafonso/ticket_triage_MoritzLaurer_deberta-v3-base-zeroshot-v2.0_finetuned | 9.65 |
+
+Some key insights from the experiments:
+
+- Very large gradients - hinting at exploding gradients - despite use of a strict gradient clipping parameter (0.5 max_grad_norm)
+- When training for more epochs (>5) eval/loss (loss in the validation set) would start increasing midway.
+- Improved perfomance in the validation dataset during training not reflected in the test set - poor generalization ability.
+- Using a longer context model such as modernbert improved results only slightly but looked more able to capture underrepresented classes (looking at individual f1 class scores during training)
+- Using transfer learning with pre-trained NLI models over general encoder models did not provide the expected edge in performance.
+
+As results are **very subpar** and unusable, a different approach is warranted.
+
+Two avenues seem promising:
+
+- Using a simpler approach with tf-idf features and multi-class classification
+- Using supervised topic modelling techniques to create a classifier (i.e., using sentence-transformers with count-vectorizer and dimensionality reduction)
+- Few-shot learning of pretrained zero-shot classifiers. (similar to what we've done here)
+
+## Key Takeaways
+
+Without prejudice to the underwhelming results:
+
+- we have put in place a training pipeline with the huggingface transformers library for sequence classification. This pipeline could be reused for other projects of the same type, such as sentiment classification.
+
+- we have learnt some elements on how to deal with class imbalance, how to create relevant logging metrics to monitor training and get a feel for what might be happening under the hood.
+
+- We have also learnt how to add regularization techniques to our model training + custom optimizer and learning rate scheduler.
 
 ## Citations
 

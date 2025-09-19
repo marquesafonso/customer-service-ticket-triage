@@ -53,8 +53,9 @@ class TicketTriageModel:
             return {"labels_str" : [self.ids2labels[_id] for _id in batch["labels"]]} 
 
         def predict(batch):
+            hypothesis_template = "This example is about {}"
             outputs = self.classifier(batch["text"], self.labels,
-                                      multi_label=False, batch_size=batch_size)
+                                      multi_label=False, hypothesis_template=hypothesis_template, batch_size=batch_size)
             if isinstance(outputs, dict):
                 return {"pred_labels": outputs["labels"][0]}
             else:
