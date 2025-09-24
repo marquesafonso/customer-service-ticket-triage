@@ -24,7 +24,7 @@ def main():
 
     ## Prepare base model
     logging.info("Preparing base model...")
-    basemodel_name = "MoritzLaurer/deberta-v3-base-zeroshot-v1.1-all-33"
+    basemodel_name = "microsoft/deberta-v3-base"
     basemodel = BaseModel(
         model_name=basemodel_name,
         labels=queue_labels
@@ -38,7 +38,7 @@ def main():
         id2label=id2label,
         label2id=label2id,
         batch_size=8,
-        num_train_epochs=3,
+        num_train_epochs=5,
         oversample=False
     )
 

@@ -18,7 +18,7 @@ def load_dataset():
         handle = dataset,
         path = subset
     )
-    queue_labels = df.unique("queue")
+    seed = 10
     # df = df.to_iterable_dataset()
 
     df_en = df.filter(lambda x: x["language"] == "en")
@@ -29,20 +29,22 @@ def load_dataset():
         "queue": x.get("queue")
     })
     df_en = df_en.map(lambda x: {
-        "ticket": x.get("subject") + "\n" + x.get("body")
+        "ticket": x.get("subject") + " " + x.get("body")
         })
-    id2label = {i: label for i, label in enumerate(queue_labels)}
-    label2id = {label: i for i, label in enumerate(queue_labels)}
-    df_en = df_en.map(lambda x: {
-        "queue_encoded" : label2id[x.get("queue")]
-    })
-    df_en = df_en.class_encode_column("queue_encoded")
-    df_en = df_en.select_columns(["ticket", "queue_encoded"]).rename_columns({"ticket": "text", "queue_encoded": "labels"})
+
+    df_en = df_en.class_encode_column("queue")
+    df_en = df_en.select_columns(["ticket", "queue"]).rename_columns({"ticket": "text", "queue": "labels"})
     logging.info(df_en.to_pandas())
 
+    ## Creating label mappings
+    id2label = {i: label for i, label in enumerate(df_en.features["labels"].names)}
+    label2id = {label: i for i, label in enumerate(df_en.features["labels"].names)}
+    queue_labels = list(label2id.keys())
+
     ## Splitting dataset into train, validation and test sets
-    train_valid, test = df_en.train_test_split(test_size=0.25, stratify_by_column="labels", seed=10).values()
-    train, valid = train_valid.train_test_split(test_size=0.1, stratify_by_column="labels", seed=10).values()
+    train_valid, test = df_en.train_test_split(test_size=0.25, stratify_by_column="labels", seed=seed).values()
+    train_valid = train_valid.shuffle(seed=seed)
+    train, valid = train_valid.train_test_split(test_size=0.1, stratify_by_column="labels", seed=seed).values()
 
     ## Verifying distribution of class labels in train and validation datasets
     labels = sorted(train.to_pandas()["labels"].unique())

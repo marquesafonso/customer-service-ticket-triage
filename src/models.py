@@ -32,11 +32,8 @@ class TicketTriageModel:
             datefmt='%H:%M:%S'
         )
         self.model_name = model_name
-        if torch.xpu.is_available():
-            self.device = "xpu"
-            torch.xpu.empty_cache()
-        else:
-            self.device = "cpu"
+        self.device = "cuda" if torch.cuda.is_available() else "xpu" if torch.xpu.is_available() else "cpu"
+        torch.cuda.empty_cache() if torch.cuda.is_available() else torch.xpu.empty_cache() if torch.xpu.is_available() else "pass"
         self.classifier = pipeline("zero-shot-classification", model=self.model_name, device=self.device)
         self.labels = labels
         if not id2label:
@@ -104,9 +101,13 @@ class BaseModel:
     
     def preprocess_data(self, dataset: ds.Dataset):
         ## Load tokenizer
+        self.config = AutoConfig.from_pretrained(self.model_name)
+        self.max_length = self.config.max_position_embeddings
+        logging.info(f"Max Length: {self.max_length}")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         def tokenize(examples):
-            return self.tokenizer(examples["text"], padding="max_length", truncation=True)
+            # https://huggingface.co/docs/transformers/pad_truncation
+            return self.tokenizer(examples["text"], padding="max_length", max_length=self.max_length, truncation=True)
         dataset = dataset.map(tokenize, batched=True, remove_columns=["text"])
         dataset = dataset.with_format("torch")
         return dataset
