@@ -101,13 +101,10 @@ class BaseModel:
     
     def preprocess_data(self, dataset: ds.Dataset):
         ## Load tokenizer
-        self.config = AutoConfig.from_pretrained(self.model_name)
-        self.max_length = self.config.max_position_embeddings
-        logging.info(f"Max Length: {self.max_length}")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         def tokenize(examples):
             # https://huggingface.co/docs/transformers/pad_truncation
-            return self.tokenizer(examples["text"], padding="max_length", max_length=self.max_length, truncation=True)
+            return self.tokenizer(examples["text"], padding="max_length", max_length=self.max_length, truncation=True, return_tensors="pt")
         dataset = dataset.map(tokenize, batched=True, remove_columns=["text"])
         dataset = dataset.with_format("torch")
         return dataset
@@ -138,6 +135,9 @@ class BaseModel:
             label2id=label2id,
             ignore_mismatched_sizes=True
         )
+        self.config = AutoConfig.from_pretrained(self.model_name)
+        self.max_length = self.config.max_position_embeddings
+        logging.info(f"Max Length: {self.max_length}")
 
         if oversample:
             ## Oversampling (underrepresented) classes

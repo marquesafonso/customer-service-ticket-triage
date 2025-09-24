@@ -38,7 +38,7 @@ def main():
         id2label=id2label,
         label2id=label2id,
         batch_size=8,
-        num_train_epochs=5,
+        num_train_epochs=7,
         oversample=False
     )
 
