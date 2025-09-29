@@ -1,5 +1,5 @@
 import warnings, logging, os
-from typing import Any
+from typing import Any, Optional
 import datasets as ds
 from transformers import (
     pipeline, 
@@ -23,7 +23,8 @@ class TicketTriageModel:
         self,
         labels: list,
         model_name = "microsoft/deberta-v3-base",
-        id2label: dict[int, Any] = None
+        id2label: dict[int, Any] = None,
+        token: Optional[str] = None
     ):
         warnings.filterwarnings("ignore")
         logging.basicConfig(
@@ -34,7 +35,7 @@ class TicketTriageModel:
         self.model_name = model_name
         self.device = "cuda" if torch.cuda.is_available() else "xpu" if torch.xpu.is_available() else "cpu"
         torch.cuda.empty_cache() if torch.cuda.is_available() else torch.xpu.empty_cache() if torch.xpu.is_available() else "pass"
-        self.classifier = pipeline("zero-shot-classification", model=self.model_name, device=self.device)
+        self.classifier = pipeline("zero-shot-classification", model=self.model_name, device=self.device, token=token)
         self.labels = labels
         if not id2label:
             self.config = AutoConfig.from_pretrained(self.model_name)
@@ -164,7 +165,7 @@ class BaseModel:
             per_device_train_batch_size=batch_size,
             gradient_accumulation_steps=2, ## Efective batch size will be batch_size * gradient_accumulation_steps
             max_grad_norm=0.5,
-            metric_for_best_model="f1_macro",
+            metric_for_best_model="accuracy",
             greater_is_better=True,
             load_best_model_at_end=True,
             lr_scheduler_type="linear",

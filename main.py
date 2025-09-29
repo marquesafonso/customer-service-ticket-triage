@@ -38,7 +38,7 @@ def main():
         id2label=id2label,
         label2id=label2id,
         batch_size=8,
-        num_train_epochs=7,
+        num_train_epochs=5,
         oversample=False
     )
 
@@ -48,7 +48,8 @@ def main():
     finetuned_model = TicketTriageModel(
         model_name=finetuned_model_name,
         labels=queue_labels,
-        id2label=id2label
+        id2label=id2label,
+        token=HF_TOKEN
     )
 
     finetuned_dataset = finetuned_model.get_predictions_from_dataset(test_dataset, batch_size=64)

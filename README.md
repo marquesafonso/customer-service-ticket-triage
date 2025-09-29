@@ -493,14 +493,15 @@ Here are some log snippets of the training experiments:
 
 Below you will find a table with the evaluation accuracy of the trained models on the test set.
 
-| Model | Eval Accuracy (test set) % |
-| --- | --- |
-| (baseline) MoritzLaurer/deberta-v3-base-zeroshot-v2.0 | 27.1 |
-| marquesafonso/ticket_triage_Alibaba-NLP_gte-modernbert-base_finetuned | 12.9 |
-| marquesafonso/ticket_triage_MoritzLaurer_deberta-v3-base-zeroshot-v1.1-all-33_finetuned | 11.87 |
-| marquesafonso/ticket_triage_microsoft_deberta-v3-base_finetuned | 4.5 |
-| marquesafonso/ticket_triage_microsoft_deberta-v3-small_finetuned | 8.98 |
-| marquesafonso/ticket_triage_MoritzLaurer_deberta-v3-base-zeroshot-v2.0_finetuned | 9.65 |
+| Model | Objective Metric |Eval Accuracy (test set) % | 
+| --- | --- | --- |
+| (baseline) MoritzLaurer/deberta-v3-base-zeroshot-v2.0 | N/A | 27.1 |
+| marquesafonso/ticket_triage_microsoft_deberta-v3-small_finetuned | Accuraccy | 17.94 |
+| marquesafonso/ticket_triage_Alibaba-NLP_gte-modernbert-base_finetuned | F1-Macro | 12.9 |
+| marquesafonso/ticket_triage_MoritzLaurer_deberta-v3-base-zeroshot-v1.1-all-33_finetuned | F1-Macro | 11.87 |
+| marquesafonso/ticket_triage_microsoft_deberta-v3-base_finetuned | F1-Macro | 4.5 |
+| marquesafonso/ticket_triage_microsoft_deberta-v3-small_finetuned | F1-Macro | 8.98 |
+| marquesafonso/ticket_triage_MoritzLaurer_deberta-v3-base-zeroshot-v2.0_finetuned | F1-Macro | 9.65 |
 
 Some key insights from the experiments:
 
