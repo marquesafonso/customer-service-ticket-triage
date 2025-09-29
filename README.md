@@ -241,7 +241,8 @@ class BaseModel:
         ## Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         def tokenize(examples):
-            return self.tokenizer(examples["text"], padding="max_length", truncation=True)
+            # https://huggingface.co/docs/transformers/pad_truncation
+            return self.tokenizer(examples["text"], padding="max_length", max_length=self.max_length, truncation=True, return_tensors="pt")
         dataset = dataset.map(tokenize, batched=True, remove_columns=["text"])
         dataset = dataset.with_format("torch")
         return dataset
@@ -276,6 +277,9 @@ def finetune_model(
             label2id=label2id,
             ignore_mismatched_sizes=True
         )
+        self.config = AutoConfig.from_pretrained(self.model_name)
+        self.max_length = self.config.max_position_embeddings
+        logging.info(f"Max Length: {self.max_length}")
 ```
 
 Optionally we may oversample underrepresented classes. This relates to an empirical observation during training that individual f1-scores of specific classes were 0.0 even at the end of training. See more about oversampling [here](https://medium.com/@abdallahashraf90x/oversampling-for-better-machine-learning-with-imbalanced-data-68f9b5ac2696). The default behaviour is not to oversample.
