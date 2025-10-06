@@ -497,6 +497,7 @@ Below you will find a table with the evaluation accuracy of the trained models o
 | --- | --- | --- |
 | (baseline) MoritzLaurer/deberta-v3-base-zeroshot-v2.0 | N/A | 27.1 |
 | marquesafonso/ticket_triage_microsoft_deberta-v3-small_finetuned | Accuraccy | 17.94 |
+| marquesafonso/ticket_triage_MoritzLaurer_deberta-v3-xsmall-zeroshot-v1.1-all-33_finetuned | Accuracy | 13.1 |
 | marquesafonso/ticket_triage_Alibaba-NLP_gte-modernbert-base_finetuned | F1-Macro | 12.9 |
 | marquesafonso/ticket_triage_MoritzLaurer_deberta-v3-base-zeroshot-v1.1-all-33_finetuned | F1-Macro | 11.87 |
 | marquesafonso/ticket_triage_microsoft_deberta-v3-base_finetuned | F1-Macro | 4.5 |
