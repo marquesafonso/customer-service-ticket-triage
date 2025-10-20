@@ -506,9 +506,8 @@ Below you will find a table with the evaluation accuracy of the trained models o
 
 Some key insights from the experiments:
 
-- Very large gradients - hinting at exploding gradients - despite use of a strict gradient clipping parameter (0.5 max_grad_norm)
-- When training for more epochs (>5) eval/loss (loss in the validation set) would start increasing midway.
-- Improved perfomance in the validation dataset during training not reflected in the test set - poor generalization ability.
+- Underfitting due to high regularization (gradient clipping) needs to be relaxed. Using higher learning rate seems to be helpful for fitting.
+- Using accuraccy as the objective function showed more effective to learning that f1-macro.
 - Using a longer context model such as modernbert improved results only slightly but looked more able to capture underrepresented classes (looking at individual f1 class scores during training)
 - Using transfer learning with pre-trained NLI models over general encoder models did not provide the expected edge in performance.
 

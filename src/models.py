@@ -164,7 +164,7 @@ class BaseModel:
             warmup_ratio=0.06,
             per_device_train_batch_size=batch_size,
             gradient_accumulation_steps=2, ## Efective batch size will be batch_size * gradient_accumulation_steps
-            max_grad_norm=0.5,
+            max_grad_norm=1,
             metric_for_best_model="accuracy",
             greater_is_better=True,
             load_best_model_at_end=True,
@@ -178,7 +178,7 @@ class BaseModel:
         ## Following hyperparams from: https://huggingface.co/MoritzLaurer/ModernBERT-large-zeroshot-v2.0
         optimizer = torch.optim.AdamW(
             self.model.parameters(),
-            lr=9e-06,
+            lr=8e-04,
             betas=(0.9, 0.999),
             eps=1e-08,
             weight_decay=0.01

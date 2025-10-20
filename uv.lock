@@ -1801,10 +1801,10 @@ dependencies = [
     { name = "umf", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
 wheels = [
-    { url = "https://download.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp313-cp313-linux_x86_64.whl" },
-    { url = "https://download.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp313-cp313-win_amd64.whl" },
-    { url = "https://download.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp313-cp313t-linux_x86_64.whl" },
-    { url = "https://download.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp313-cp313t-win_amd64.whl" },
+    { url = "https://download.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp313-cp313-linux_x86_64.whl", hash = "sha256:6599225a4e83714d8c33b6bfdeafbd85389027d29270635bb7385d62214bee9e" },
+    { url = "https://download.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp313-cp313-win_amd64.whl", hash = "sha256:e034aab1d71760dc80a731531be43673ffe15e99033b82d24e40d2e6d41bd8bf" },
+    { url = "https://download.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp313-cp313t-linux_x86_64.whl", hash = "sha256:c08a53e0c953be4a27087719cc1028c2abe9944ae7f1dea709446894000cc2d4" },
+    { url = "https://download.pytorch.org/whl/xpu/torch-2.8.0%2Bxpu-cp313-cp313t-win_amd64.whl", hash = "sha256:0b6a39618c78a09f3d928587137ae2d6802a84d773e0f847f9b3e43c1f03b592" },
 ]
 
 [[package]]

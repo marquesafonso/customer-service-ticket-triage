@@ -42,9 +42,9 @@ def load_dataset():
     queue_labels = list(label2id.keys())
 
     ## Splitting dataset into train, validation and test sets
-    train_valid, test = df_en.train_test_split(test_size=0.25, stratify_by_column="labels", seed=seed).values()
+    train_valid, test = df_en.train_test_split(test_size=0.1, stratify_by_column="labels", seed=seed).values()
     train_valid = train_valid.shuffle(seed=seed)
-    train, valid = train_valid.train_test_split(test_size=0.1, stratify_by_column="labels", seed=seed).values()
+    train, valid = train_valid.train_test_split(test_size=0.05, stratify_by_column="labels", seed=seed).values()
 
     ## Verifying distribution of class labels in train and validation datasets
     labels = sorted(train.to_pandas()["labels"].unique())

@@ -24,7 +24,7 @@ def main():
 
     ## Prepare base model
     logging.info("Preparing base model...")
-    basemodel_name = "microsoft/deberta-v3-base"
+    basemodel_name = "microsoft/deberta-v3-small"
     basemodel = BaseModel(
         model_name=basemodel_name,
         labels=queue_labels
