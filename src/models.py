@@ -178,7 +178,7 @@ class BaseModel:
         ## Following hyperparams from: https://huggingface.co/MoritzLaurer/ModernBERT-large-zeroshot-v2.0
         optimizer = torch.optim.AdamW(
             self.model.parameters(),
-            lr=8e-04,
+            lr=5e-3,
             betas=(0.9, 0.999),
             eps=1e-08,
             weight_decay=0.01
